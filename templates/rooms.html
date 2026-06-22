@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Rooms — Draft Together{% endblock %}
+
+{% block content %}
+<style>
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .room-list { list-style: none; }
+  .room-list li { padding: 12px; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 8px; }
+  .room-name { font-weight: 500; }
+  .room-meta { font-size: 0.8rem; color: #777; margin-top: 2px; }
+  .room-header { display: flex; justify-content: space-between; align-items: center; }
+  .copy-btn { background: none; border: none; cursor: pointer; color: #888; padding: 0; font-size: 1rem; line-height: 1; }
+  .copy-btn:hover { color: #111; }
+  .empty { color: #888; font-size: 0.9rem; }
+  #loading { color: #888; font-size: 0.9rem; }
+</style>
+
+<div class="container" style="max-width: 600px;">
+  <div class="topbar">
+    <h1>Rooms</h1>
+    <button id="logout">Logout</button>
+  </div>
+
+  <p id="loading">Loading...</p>
+  <ul class="room-list" id="room-list" hidden></ul>
+  <p class="empty" id="empty" hidden>No rooms yet.</p>
+  <p class="error" id="error"></p>
+</div>
+
+<script>
+  const token = localStorage.getItem("token");
+  if (!token) window.location.href = "/";
+
+  document.getElementById("logout").addEventListener("click", function () {
+    localStorage.removeItem("token");
+    window.location.href = "/";
+  });
+
+  async function loadRooms() {
+    const loadingEl = document.getElementById("loading");
+    const listEl = document.getElementById("room-list");
+    const emptyEl = document.getElementById("empty");
+    const errorEl = document.getElementById("error");
+
+    try {
+      const res = await fetch("/api/rooms/", {
+        headers: { "Authorization": "Token " + token },
+      });
+
+      if (res.status === 401) {
+        localStorage.removeItem("token");
+        window.location.href = "/";
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error("Failed to load rooms.");
+      }
+
+      const rooms = await res.json();
+      loadingEl.hidden = true;
+
+      if (rooms.length === 0) {
+        emptyEl.hidden = false;
+        return;
+      }
+
+      listEl.hidden = false;
+      listEl.innerHTML = rooms.map(room => `
+        <li>
+          <div class="room-header">
+            <a class="room-name" href="/rooms/${room.id}/">${escapeHtml(room.name)}</a>
+            <button class="copy-btn" title="Copy room link" onclick="copyLink('${room.id}', this)">&#128279;</button>
+          </div>
+          <div class="room-meta">Created: ${formatDate(room.created_at)}</div>
+        </li>
+      `).join("");
+    } catch (err) {
+      loadingEl.hidden = true;
+      errorEl.textContent = err.message;
+    }
+  }
+
+  function copyLink(roomId, btn) {
+    const url = `${location.origin}/rooms/${roomId}/`;
+    navigator.clipboard.writeText(url).then(() => {
+      const prev = btn.innerHTML;
+      btn.innerHTML = "&#10003;";
+      setTimeout(() => btn.innerHTML = prev, 1500);
+    });
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function formatDate(iso) {
+    return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
+
+  loadRooms();
+</script>
+{% endblock %}

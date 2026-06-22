@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ room.name }} — Draft Together{% endblock %}
+
+{% block content %}
+<style>
+  .room-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .room-id { color: #888; font-size: 0.875rem; }
+</style>
+
+<div class="container">
+  <div class="room-header">
+    <h1>{{ room.name }}</h1>
+    <button id="share-btn">Share</button>
+  </div>
+  <p class="room-id">{{ room.id }}</p>
+</div>
+
+<script>
+  const token = localStorage.getItem("token");
+  if (!token) window.location.href = "/";
+
+  document.getElementById("share-btn").addEventListener("click", async function () {
+    const btn = this;
+    btn.disabled = true;
+    btn.textContent = "Generating...";
+
+    try {
+      const res = await fetch("/api/rooms/{{ room.id }}/invites/", {
+        method: "POST",
+        headers: { "Authorization": "Token " + token },
+      });
+
+      if (res.status === 401) {
+        localStorage.removeItem("token");
+        window.location.href = "/";
+        return;
+      }
+
+      const data = await res.json();
+      const inviteUrl = `${location.origin}/invite/${data.token}/`;
+      await navigator.clipboard.writeText(inviteUrl);
+
+      btn.textContent = "Copied!";
+      setTimeout(() => {
+        btn.textContent = "Share";
+        btn.disabled = false;
+      }, 2000);
+    } catch {
+      btn.textContent = "Share";
+      btn.disabled = false;
+    }
+  });
+</script>
+{% endblock %}
