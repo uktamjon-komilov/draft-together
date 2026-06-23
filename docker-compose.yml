@@ -21,6 +21,13 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+  
+  redisinsight:
+    image: redis/redisinsight:latest
+    ports:
+      - "5540:5540"
+    depends_on:
+      - redis
 
   web:
     build: .

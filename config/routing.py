@@ -2,6 +2,8 @@ from django.urls import path
 
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
+from rooms.routing import websocket_urlpatterns as rooms_routing
+
 
 class EchoConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
@@ -17,4 +19,5 @@ class EchoConsumer(AsyncJsonWebsocketConsumer):
 
 websocket_urlpatterns = [
     path("echo/", EchoConsumer.as_asgi()),
+    *rooms_routing,
 ]
